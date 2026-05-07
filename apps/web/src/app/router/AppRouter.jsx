@@ -85,7 +85,7 @@ function AppRouter() {
           <Route
             path="reports"
             element={
-              <ProtectedRoute allowedRoles={[ROLE_ADMIN]}>
+              <ProtectedRoute allowedRoles={[ROLE_ADMIN, ROLE_EMPLOYEE]}>
                 {renderLazyPage(<ReportsPage />, 'Loading reports...')}
               </ProtectedRoute>
             }

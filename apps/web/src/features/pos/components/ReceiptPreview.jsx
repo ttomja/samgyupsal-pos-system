@@ -71,9 +71,8 @@ function ReceiptPreview({ receipt, onClose, showActions = true }) {
                     <div className="receipt-item-copy">
                       <strong>{item.name}</strong>
                       <span>
-                        {item.isServiceFee
-                          ? 'Service fee line'
-                          : `${item.quantity} x ${peso(item.unitPrice)}`}
+                        {`${item.quantity} x ${peso(item.unitPrice)}`}
+                        {item.isServiceFee ? ' service fee' : ''}
                       </span>
                     </div>
                     <div className="receipt-item-total">{peso(item.lineTotal)}</div>

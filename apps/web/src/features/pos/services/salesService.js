@@ -283,6 +283,10 @@ function matchesUserScope(sale, user) {
     return true
   }
 
+  if (user?.branchId != null && String(user.branchId).trim() !== '') {
+    return Number(sale.branch_id) === Number(user.branchId)
+  }
+
   const cashierId = normalizeText(user?.id)
   return cashierId.length > 0 && normalizeText(sale.cashier_id) === cashierId
 }
@@ -431,8 +435,12 @@ async function getSupabaseCashierIdsByQuery(cashierQuery) {
 function applySupabaseSalesFilters(query, options = {}, user) {
   let nextQuery = query
 
-  if (!isAdminUser(user) && normalizeText(user?.id)) {
-    nextQuery = nextQuery.eq('cashier_id', normalizeText(user.id))
+  if (!isAdminUser(user)) {
+    if (user?.branchId != null && String(user.branchId).trim() !== '') {
+      nextQuery = nextQuery.eq('branch_id', Number(user.branchId))
+    } else if (normalizeText(user?.id)) {
+      nextQuery = nextQuery.eq('cashier_id', normalizeText(user.id))
+    }
   }
 
   const normalizedBranchId = String(options.branchId || '').trim()

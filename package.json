@@ -5,6 +5,7 @@
     "dev": "npm run dev:web",
     "build": "npm run build:web",
     "lint": "npm run lint:web",
+    "test:fefo-smoke": "npm --prefix ./apps/web run test:fefo-smoke",
     "preview": "npm run preview:web",
     "install:web": "npm --prefix ./apps/web ci",
     "dev:web": "npm --prefix ./apps/web run dev",

@@ -351,7 +351,7 @@ function SalesHistoryDetailsModal({ sale, isOpen, onClose }) {
                                 {item.isServiceFee ? 'Service Fee' : 'Sale Item'}
                               </span>
                             </td>
-                            <td>{item.isServiceFee ? '-' : item.quantity}</td>
+                            <td>{item.quantity}</td>
                             <td>{peso(item.unitPrice)}</td>
                             <td className="sales-history-item-total">{peso(item.lineTotal)}</td>
                           </tr>

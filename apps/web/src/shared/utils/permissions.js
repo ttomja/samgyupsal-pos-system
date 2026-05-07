@@ -35,7 +35,7 @@ export const APP_NAV_ITEMS = [
     to: '/app/reports',
     label: 'Reports',
     shortLabel: 'RPT',
-    allowedRoles: [ROLE_ADMIN],
+    allowedRoles: [ROLE_ADMIN, ROLE_EMPLOYEE],
   },
   {
     key: 'products',

@@ -20,6 +20,7 @@ import '../styles/pos.css'
 import { mergeProductAndStoredCategories } from '../../../shared/utils/storage'
 import useSessionStorageState from '../../../shared/hooks/useSessionStorageState'
 import { normalizeSearchInput } from '../../../shared/utils/validation'
+import { SALES_HISTORY_ALL_FILTER } from '../services/salesService'
 import {
   getRoleLabel,
   isAdminUser,
@@ -73,6 +74,7 @@ function PosPage() {
     }),
   )
   const activeBranchId = posViewState?.activeBranchId ?? user?.branchId ?? ''
+  const isAllBranchesScope = String(activeBranchId) === SALES_HISTORY_ALL_FILTER
   const activeCategory = posViewState?.activeCategory || 'All'
   const searchTerm = posViewState?.searchTerm || ''
   const currentPage = Math.max(1, Number(posViewState?.currentPage || 1))
@@ -85,8 +87,10 @@ function PosPage() {
       ...(typeof patch === 'function' ? patch(currentState || {}) : patch),
     }))
   }, [setPosViewState])
+  const activeCatalogBranchId =
+    activeBranchId && !isAllBranchesScope ? activeBranchId : ''
   const initialCatalogProducts = getCachedProducts(
-    activeBranchId ? { branchId: activeBranchId } : {},
+    activeCatalogBranchId ? { branchId: activeCatalogBranchId } : {},
   )
   const [catalogProducts, setCatalogProducts] = useState(() => initialCatalogProducts || [])
   const [catalogError, setCatalogError] = useState('')
@@ -141,7 +145,13 @@ function PosPage() {
             (branch) => Number(branch.id) === Number(currentBranchId),
           )
 
-          if (hasCurrentBranch) {
+          if (
+            hasCurrentBranch ||
+            (
+              currentState?.activeView === 'history' &&
+              String(currentBranchId) === SALES_HISTORY_ALL_FILTER
+            )
+          ) {
             return currentState
           }
 
@@ -177,9 +187,11 @@ function PosPage() {
 
   const activeBranch = useMemo(
     () =>
-      branchOptions.find((branch) => Number(branch.id) === Number(activeBranchId)) ||
-      null,
-    [activeBranchId, branchOptions],
+      isAllBranchesScope
+        ? null
+        : branchOptions.find((branch) => Number(branch.id) === Number(activeBranchId)) ||
+          null,
+    [activeBranchId, branchOptions, isAllBranchesScope],
   )
 
   useEffect(() => {
@@ -188,7 +200,7 @@ function PosPage() {
       return
     }
 
-    if (!activeBranchId) {
+    if (!activeCatalogBranchId) {
       setCatalogProducts([])
       setIsCatalogLoading(false)
       return
@@ -196,7 +208,7 @@ function PosPage() {
 
     const loadCatalog = async () => {
       try {
-        const products = await getProducts({ branchId: activeBranchId })
+        const products = await getProducts({ branchId: activeCatalogBranchId })
         setCatalogProducts(products)
         setCatalogError('')
       } catch (error) {
@@ -210,7 +222,7 @@ function PosPage() {
       }
     }
 
-    const cachedProducts = getCachedProducts({ branchId: activeBranchId })
+    const cachedProducts = getCachedProducts({ branchId: activeCatalogBranchId })
 
     if (cachedProducts) {
       setCatalogProducts(cachedProducts)
@@ -221,7 +233,7 @@ function PosPage() {
     }
 
     loadCatalog()
-  }, [activeBranchId, canUseSalesDesk])
+  }, [activeCatalogBranchId, canUseSalesDesk])
 
   const formattedDate = new Intl.DateTimeFormat('en-PH', {
     weekday: 'short',
@@ -244,6 +256,18 @@ function PosPage() {
   const cashierRoleLabel = getRoleLabel(user?.roleKey || user?.role)
   const transactionSuffix = String(transactionSequence).padStart(3, '0')
   const workspaceLabel = activeView === 'history' ? 'Sales History' : 'Sales Desk'
+  const branchScopeOptions = useMemo(
+    () => [
+      ...(isAdminUser(user) && activeView === 'history'
+        ? [{ value: SALES_HISTORY_ALL_FILTER, label: 'All Branches' }]
+        : []),
+      ...branchOptions.map((branch) => ({
+        value: branch.id,
+        label: branch.name,
+      })),
+    ],
+    [activeView, branchOptions, user],
+  )
 
   const filteredProducts = useMemo(() => {
     const normalizedSearch = normalizeSearchInput(deferredSearchTerm).toLowerCase()
@@ -336,7 +360,24 @@ function PosPage() {
   )
 
   const handleBranchChange = (event) => {
-    const nextBranchId = Number(event.target.value)
+    const nextBranchValue = event.target.value
+
+    if (String(nextBranchValue) === SALES_HISTORY_ALL_FILTER) {
+      if (activeView !== 'history') {
+        setWorkspaceMessage('All branches is only available while reviewing Sales History.')
+        setWorkspaceMessageTone('warning')
+        return
+      }
+
+      setWorkspaceMessage('')
+      setWorkspaceMessageTone('info')
+      updatePosViewState({
+        activeBranchId: SALES_HISTORY_ALL_FILTER,
+      })
+      return
+    }
+
+    const nextBranchId = Number(nextBranchValue)
 
     if (cartItems.length > 0 && Number(activeBranchId) !== Number(nextBranchId)) {
       setWorkspaceMessage(
@@ -436,10 +477,7 @@ function PosPage() {
                   onChange={handleBranchChange}
                   id="active-pos-branch-select"
                   placeholder="Select active sales branch"
-                  options={branchOptions.map((branch) => ({
-                    value: branch.id,
-                    label: branch.name
-                  }))}
+                  options={branchScopeOptions}
                 />
               </label>
             ) : null}
@@ -482,11 +520,16 @@ function PosPage() {
           <button
             type="button"
             className={activeView === 'desk' ? 'pos-view-button active' : 'pos-view-button'}
-          onClick={() =>
-            updatePosViewState({
-              activeView: 'desk',
-            })
-          }
+            onClick={() =>
+              updatePosViewState((currentState) => ({
+                ...currentState,
+                activeBranchId:
+                  String(currentState?.activeBranchId || activeBranchId) === SALES_HISTORY_ALL_FILTER
+                    ? branchOptions[0]?.id || ''
+                    : currentState?.activeBranchId || activeBranchId,
+                activeView: 'desk',
+              }))
+            }
           >
             Sales Desk
           </button>
@@ -515,6 +558,12 @@ function PosPage() {
       {activeView === 'history' ? (
         <SalesHistoryPanel
           branchOptions={branchOptions}
+          branchScopeId={activeBranchId}
+          onBranchScopeChange={(nextBranchId) =>
+            updatePosViewState({
+              activeBranchId: nextBranchId,
+            })
+          }
           refreshKey={historyRefreshKey}
           user={user}
         />

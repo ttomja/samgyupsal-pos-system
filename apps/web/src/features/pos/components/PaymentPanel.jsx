@@ -6,6 +6,7 @@ import ReceiptPreview from './ReceiptPreview'
 import useAuth from '../../auth/hooks/useAuth'
 import {
   buildServiceFeeLineItems,
+  normalizeServiceFeeQuantities,
   serviceFeeOptions,
 } from '../utils/serviceFees'
 import {
@@ -37,7 +38,7 @@ function PaymentPanel({
   const [discountType, setDiscountType] = useState(DEFAULT_DISCOUNT_TYPE)
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [cashReceived, setCashReceived] = useState('')
-  const [selectedServiceFees, setSelectedServiceFees] = useState([])
+  const [selectedServiceFees, setSelectedServiceFees] = useState({})
   const [message, setMessage] = useState('')
   const [messageTone, setMessageTone] = useState('info')
   const [submitting, setSubmitting] = useState(false)
@@ -86,7 +87,7 @@ function PaymentPanel({
     setDiscountType(DEFAULT_DISCOUNT_TYPE)
     setPaymentMethod('cash')
     setCashReceived('')
-    setSelectedServiceFees([])
+    setSelectedServiceFees({})
   }
 
   const clearStatusMessage = () => {
@@ -132,7 +133,7 @@ function PaymentPanel({
       discountType,
       heldAt: new Date().toISOString(),
       paymentMethod,
-      selectedServiceFees: [...selectedServiceFees],
+      selectedServiceFees: { ...selectedServiceFees },
     }
 
     setHeldOrder(heldOrderSnapshot)
@@ -169,7 +170,7 @@ function PaymentPanel({
     setDiscountType(heldOrder.discountType || DEFAULT_DISCOUNT_TYPE)
     setPaymentMethod(heldOrder.paymentMethod)
     setCashReceived(heldOrder.cashReceived)
-    setSelectedServiceFees([...(heldOrder.selectedServiceFees || [])])
+    setSelectedServiceFees(normalizeServiceFeeQuantities(heldOrder.selectedServiceFees))
     setHeldOrder(null)
     setMessage('Held order restored.')
     setMessageTone('success')
@@ -185,13 +186,23 @@ function PaymentPanel({
     setMessageTone('info')
   }
 
-  const handleToggleServiceFee = (feeValue) => {
+  const handleAdjustServiceFee = (feeValue, delta) => {
     clearStatusMessage()
-    setSelectedServiceFees((currentValue) =>
-      currentValue.includes(feeValue)
-        ? currentValue.filter((value) => value !== feeValue)
-        : [...currentValue, feeValue],
-    )
+    setSelectedServiceFees((currentValue) => {
+      const currentQuantity = Number(currentValue?.[feeValue] || 0)
+      const nextQuantity = Math.max(0, currentQuantity + Number(delta || 0))
+
+      if (nextQuantity <= 0) {
+        const nextValue = { ...(currentValue || {}) }
+        delete nextValue[feeValue]
+        return nextValue
+      }
+
+      return {
+        ...(currentValue || {}),
+        [feeValue]: nextQuantity,
+      }
+    })
   }
 
   const handleCheckout = async () => {
@@ -347,10 +358,11 @@ function PaymentPanel({
         <span>Checkout Add-ons</span>
         <div className="service-fee-list">
           {serviceFeeOptions.map((feeOption) => {
-            const isSelected = selectedServiceFees.includes(feeOption.value)
+            const selectedQuantity = Number(selectedServiceFees?.[feeOption.value] || 0)
+            const isSelected = selectedQuantity > 0
 
             return (
-              <label
+              <div
                 key={feeOption.value}
                 className={
                   isSelected
@@ -358,17 +370,37 @@ function PaymentPanel({
                     : 'service-fee-option'
                 }
               >
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={() => handleToggleServiceFee(feeOption.value)}
-                />
                 <div className="service-fee-copy">
                   <strong>{feeOption.label}</strong>
                   <span>{feeOption.note}</span>
                 </div>
-                <strong className="service-fee-amount">{peso(feeOption.amount)}</strong>
-              </label>
+                <strong className="service-fee-amount">
+                  {peso(feeOption.amount)}
+                </strong>
+                <div
+                  className="service-fee-stepper"
+                  aria-label={`${feeOption.label} quantity`}
+                >
+                  <button
+                    type="button"
+                    className="quantity-button"
+                    onClick={() => handleAdjustServiceFee(feeOption.value, -1)}
+                    disabled={selectedQuantity <= 0}
+                    aria-label={`Decrease ${feeOption.label}`}
+                  >
+                    -
+                  </button>
+                  <span className="quantity-value">{selectedQuantity}</span>
+                  <button
+                    type="button"
+                    className="quantity-button"
+                    onClick={() => handleAdjustServiceFee(feeOption.value, 1)}
+                    aria-label={`Increase ${feeOption.label}`}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
             )
           })}
         </div>

@@ -10,6 +10,10 @@ import { isSupabaseAuthEnabled } from '../../../shared/supabase/client'
 import { peso, shortDateTime } from '../../../shared/utils/formatters'
 import { isAdminUser } from '../../../shared/utils/permissions'
 import {
+  downloadRowsAsCsv,
+  downloadRowsAsXlsx,
+} from '../../../shared/utils/exportData'
+import {
   getCachedProfilesDirectory,
   getProfilesDirectory,
 } from '../../users/services/profileService'
@@ -22,7 +26,9 @@ import {
   getSaleItemCount,
   getSalePaymentMethodLabel,
   getSaleReference,
+  getSalesRecords,
   getSalesHistoryPage,
+  isServiceFeeLineItem,
   salesHistoryPaymentMethodOptions,
 } from '../services/salesService'
 
@@ -34,6 +40,17 @@ const EMPTY_HISTORY_PAGE = {
   pageSize: DEFAULT_SALES_HISTORY_PAGE_SIZE,
 }
 const SALES_HISTORY_PAGE_STATE_KEY = 'page-state:sales-history'
+const salesHistoryExportColumns = [
+  { key: 'saleReference', header: 'Sale ID / Receipt Number' },
+  { key: 'dateTime', header: 'Date and Time' },
+  { key: 'branch', header: 'Branch' },
+  { key: 'cashier', header: 'Cashier / Employee' },
+  { key: 'itemsSold', header: 'Items Sold' },
+  { key: 'quantity', header: 'Quantity' },
+  { key: 'addOns', header: 'Add-ons' },
+  { key: 'paymentMethod', header: 'Payment Method' },
+  { key: 'totalAmount', header: 'Total Amount' },
+]
 
 function getEmployeeCashierLabel(employee = {}) {
   return [
@@ -41,6 +58,41 @@ function getEmployeeCashierLabel(employee = {}) {
     employee.username ? `@${employee.username}` : '@username-pending',
     employee.branchName || 'Unassigned Branch',
   ].join(' - ')
+}
+
+function formatSaleItemList(items = [], predicate) {
+  const matchingItems = items.filter(predicate)
+
+  if (matchingItems.length === 0) {
+    return ''
+  }
+
+  return matchingItems
+    .map((item) => `${item.item_name || 'Unknown Item'} x ${Number(item.quantity || 0)}`)
+    .join('; ')
+}
+
+function buildSalesHistoryExportRows(records = []) {
+  return records.map((sale) => {
+    const saleItems = Array.isArray(sale.items) ? sale.items : []
+    const productItems = saleItems.filter((item) => !isServiceFeeLineItem(item))
+    const serviceFeeItems = saleItems.filter((item) => isServiceFeeLineItem(item))
+
+    return {
+      saleReference: getSaleReference(sale),
+      dateTime: shortDateTime(sale.submitted_at || sale.created_at),
+      branch: sale.branch_name || 'All Branches',
+      cashier: sale.cashier_name || 'Unknown Cashier',
+      itemsSold: formatSaleItemList(productItems, () => true),
+      quantity: productItems.reduce(
+        (total, item) => total + Number(item.quantity || 0),
+        0,
+      ),
+      addOns: formatSaleItemList(serviceFeeItems, () => true),
+      paymentMethod: getSalePaymentMethodLabel(sale.payment_method),
+      totalAmount: Number(sale.total_amount || 0),
+    }
+  })
 }
 
 function buildInitialHistoryViewState(user, isAdmin) {
@@ -57,6 +109,8 @@ function buildInitialHistoryViewState(user, isAdmin) {
 
 function SalesHistoryPanel({
   branchOptions = [],
+  branchScopeId = null,
+  onBranchScopeChange,
   refreshKey = 0,
   user,
 }) {
@@ -72,7 +126,12 @@ function SalesHistoryPanel({
   const dateFrom = historyViewState?.dateFrom || ''
   const dateTo = historyViewState?.dateTo || ''
   const paymentMethod = historyViewState?.paymentMethod || SALES_HISTORY_ALL_FILTER
+  const controlledBranchScope =
+    isAdmin && branchScopeId != null && String(branchScopeId).trim() !== ''
+      ? branchScopeId
+      : null
   const branchId =
+    controlledBranchScope ??
     historyViewState?.branchId ??
     (isAdmin ? SALES_HISTORY_ALL_FILTER : user?.branchId || SALES_HISTORY_ALL_FILTER)
   const currentPage = Math.max(1, Number(historyViewState?.currentPage || 1))
@@ -98,6 +157,8 @@ function SalesHistoryPanel({
   )
   const [isLoading, setIsLoading] = useState(() => !initialCachedHistoryPage)
   const [loadError, setLoadError] = useState('')
+  const [exportError, setExportError] = useState('')
+  const [isExporting, setIsExporting] = useState(false)
   const [selectedSale, setSelectedSale] = useState(null)
   const [employeeDirectory, setEmployeeDirectory] = useState(() =>
     isAdmin
@@ -292,9 +353,11 @@ function SalesHistoryPanel({
     updateHistoryViewState((currentState) => ({
       ...(currentState || {}),
       branchId:
-        isAdmin ? currentState?.branchId || SALES_HISTORY_ALL_FILTER : user?.branchId || SALES_HISTORY_ALL_FILTER,
+        isAdmin
+          ? controlledBranchScope || currentState?.branchId || SALES_HISTORY_ALL_FILTER
+          : user?.branchId || SALES_HISTORY_ALL_FILTER,
     }))
-  }, [isAdmin, updateHistoryViewState, user?.branchId])
+  }, [controlledBranchScope, isAdmin, updateHistoryViewState, user?.branchId])
 
   useEffect(() => {
     updateHistoryViewState((currentState) => (
@@ -440,6 +503,54 @@ function SalesHistoryPanel({
         ? 'No completed transactions match that employee or cashier filter. Try the employee name, username, date, branch, or clear the filters.'
         : 'Try adjusting the transaction, date, branch, or payment filters.'
       : 'Completed sales will appear here once checkout records are saved.'
+
+  const handleExportSalesHistory = async (format) => {
+    try {
+      setIsExporting(true)
+      setExportError('')
+      const records = await getSalesRecords({
+        user,
+        transactionQuery: deferredTransactionQuery,
+        cashierQuery: isAdmin ? deferredCashierQuery : '',
+        cashierProfileIds: isAdmin ? cashierProfileIds : [],
+        dateFrom,
+        dateTo,
+        paymentMethod,
+        branchId: isAdmin ? branchId : user?.branchId ?? '',
+      })
+      const exportRows = buildSalesHistoryExportRows(records)
+      const branchLabel =
+        branchId === SALES_HISTORY_ALL_FILTER
+          ? 'all-branches'
+          : branchOptions.find((branch) => Number(branch.id) === Number(branchId))?.name ||
+            user?.branchName ||
+            'assigned-branch'
+      const filename = [
+        'sales-history',
+        branchLabel,
+        dateFrom || 'all-dates',
+        dateTo || 'all-dates',
+      ].join('-')
+
+      if (format === 'xlsx') {
+        downloadRowsAsXlsx(filename, salesHistoryExportColumns, exportRows, {
+          sheetName: 'Sales History',
+        })
+        return
+      }
+
+      downloadRowsAsCsv(filename, salesHistoryExportColumns, exportRows)
+    } catch (error) {
+      console.error('Failed to export sales history:', error)
+      setExportError(
+        error.response?.data?.message ||
+          error.message ||
+          'Unable to export sales history right now.',
+      )
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   return (
     <>
@@ -589,11 +700,12 @@ function SalesHistoryPanel({
                 <SelectMenu
                   className="sales-history-select"
                   value={branchId}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    onBranchScopeChange?.(event.target.value)
                     updateHistoryViewState({
                       branchId: event.target.value,
                     })
-                  }
+                  }}
                   options={branchFilterOptions}
                 />
               </label>
@@ -605,16 +717,19 @@ function SalesHistoryPanel({
               type="button"
               className="ghost-action sales-history-reset"
               onClick={() => {
+                const resetBranchId =
+                  isAdmin
+                    ? SALES_HISTORY_ALL_FILTER
+                    : user?.branchId || SALES_HISTORY_ALL_FILTER
+
+                onBranchScopeChange?.(resetBranchId)
                 updateHistoryViewState({
                   transactionQuery: '',
                   cashierQuery: '',
                   dateFrom: '',
                   dateTo: '',
                   paymentMethod: SALES_HISTORY_ALL_FILTER,
-                  branchId:
-                    isAdmin
-                      ? SALES_HISTORY_ALL_FILTER
-                      : user?.branchId || SALES_HISTORY_ALL_FILTER,
+                  branchId: resetBranchId,
                   currentPage: 1,
                 })
               }}
@@ -622,6 +737,25 @@ function SalesHistoryPanel({
               Clear Filters
             </button>
           ) : null}
+
+          <div className="sales-history-export-actions">
+            <button
+              type="button"
+              className="ghost-action"
+              onClick={() => handleExportSalesHistory('csv')}
+              disabled={isExporting || isLoading || historyPage.totalCount === 0}
+            >
+              {isExporting ? 'Exporting...' : 'Export CSV'}
+            </button>
+            <button
+              type="button"
+              className="ghost-action"
+              onClick={() => handleExportSalesHistory('xlsx')}
+              disabled={isExporting || isLoading || historyPage.totalCount === 0}
+            >
+              Export Excel
+            </button>
+          </div>
         </div>
 
         {loadError ? (
@@ -629,6 +763,14 @@ function SalesHistoryPanel({
             variant="error"
             title="Sales history unavailable"
             message={loadError}
+          />
+        ) : null}
+
+        {exportError ? (
+          <NoticeBanner
+            variant="error"
+            title="Export unavailable"
+            message={exportError}
           />
         ) : null}
 

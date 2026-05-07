@@ -703,20 +703,13 @@
 
 .service-fee-option {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 0.75rem;
   align-items: center;
   padding: 0.85rem 0.9rem;
   border: 1px solid rgba(166, 63, 20, 0.14);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.92);
-  cursor: pointer;
-}
-
-.service-fee-option input {
-  width: 1rem;
-  height: 1rem;
-  margin: 0;
 }
 
 .service-fee-option-selected {
@@ -743,6 +736,16 @@
 .service-fee-amount {
   color: var(--accent-dark);
   white-space: nowrap;
+}
+
+.service-fee-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid rgba(166, 63, 20, 0.14);
+  border-radius: 999px;
+  background: #fffaf5;
 }
 
 .summary-row {
@@ -1023,6 +1026,13 @@
 
 .sales-history-reset {
   justify-self: start;
+}
+
+.sales-history-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
 }
 
 .sales-history-table-shell {
@@ -1486,8 +1496,14 @@
   }
 
   .sales-history-detail-toolbar .ghost-action,
-  .sales-history-detail-toolbar .primary-button {
+  .sales-history-detail-toolbar .primary-button,
+  .sales-history-export-actions .ghost-action {
     width: 100%;
+  }
+
+  .sales-history-export-actions {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 }
 
