@@ -617,3 +617,147 @@ textarea:focus-visible {
     justify-content: flex-start;
   }
 }
+
+/* Compact professional workspace rhythm for operational pages. */
+.page-shell {
+  gap: 0.85rem;
+}
+
+.page-header {
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+}
+
+.page-header h1,
+.page-header h2 {
+  margin-bottom: 0.15rem;
+  font-size: clamp(1.35rem, 1.8vw, 1.75rem);
+}
+
+.page-header .supporting-text {
+  max-width: 54rem;
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
+
+.page-header-actions {
+  gap: 0.5rem;
+}
+
+.page-header-stat {
+  min-width: 96px;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+}
+
+.page-header-stat strong {
+  font-size: 1.05rem;
+}
+
+.page-header-stat span {
+  font-size: 0.68rem;
+  letter-spacing: 0.07em;
+}
+
+.card-grid {
+  gap: 0.75rem;
+}
+
+.info-card,
+.panel {
+  border-radius: 8px;
+  padding: 0.9rem;
+}
+
+.panel {
+  gap: 0.75rem;
+}
+
+.panel > h2,
+.panel > h3 {
+  font-size: 1.18rem;
+  line-height: 1.2;
+}
+
+.info-card strong {
+  margin-top: 0.35rem;
+  font-size: 1.45rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.card-label,
+.eyebrow,
+.meta-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+}
+
+.supporting-text {
+  line-height: 1.55;
+}
+
+.primary-button {
+  min-height: 38px;
+  border-radius: 8px;
+  padding: 0.58rem 0.78rem;
+}
+
+.notice-banner {
+  gap: 0.2rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 8px;
+}
+
+.empty-state {
+  min-height: 88px;
+  padding: 0.85rem;
+  border-radius: 8px;
+}
+
+.inventory-table-shell,
+.products-table-shell,
+.reports-table-shell,
+.users-table-shell {
+  border-radius: 8px;
+}
+
+.inventory-table th,
+.inventory-table td,
+.products-table th,
+.products-table td,
+.reports-table th,
+.reports-table td,
+.users-table th,
+.users-table td {
+  padding: 0.65rem 0.75rem;
+}
+
+.inventory-table thead th,
+.products-table thead th,
+.reports-table thead th,
+.users-table thead th {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+}
+
+.app-pagination {
+  gap: 0.75rem;
+  margin-top: 0.7rem;
+}
+
+.app-pagination-button {
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0.48rem 0.65rem;
+}
+
+@media (max-width: 1080px) {
+  .page-header {
+    align-items: flex-start;
+  }
+
+  .page-header-actions {
+    justify-content: flex-start;
+  }
+}

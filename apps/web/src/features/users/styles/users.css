@@ -275,3 +275,165 @@
     grid-template-columns: 1fr;
   }
 }
+
+.users-page {
+  gap: 0.8rem;
+}
+
+.users-page > .card-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.users-management-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.users-form,
+.branch-form {
+  gap: 0.75rem;
+}
+
+.users-field {
+  gap: 0.32rem;
+}
+
+.users-field span {
+  font-size: 0.78rem;
+}
+
+.users-field input,
+.users-field select,
+.users-field textarea,
+.users-field .select-menu-trigger {
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+}
+
+.users-field textarea {
+  min-height: 92px;
+}
+
+.users-inline-note,
+.users-form-error {
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+}
+
+.users-secondary-action,
+.users-table-button {
+  min-height: 36px;
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.84rem;
+}
+
+.users-overview-grid {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid rgba(89, 67, 48, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.users-overview-card {
+  gap: 0.22rem;
+  min-height: 74px;
+  border: 0;
+  border-right: 1px solid rgba(31, 45, 61, 0.08);
+  border-radius: 0;
+  padding: 0.62rem 0.7rem;
+  background: transparent;
+}
+
+.users-overview-card:last-child {
+  border-right: 0;
+}
+
+.users-overview-card strong {
+  font-size: 1.28rem;
+}
+
+.users-overview-card .supporting-text {
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.users-panel-actions {
+  justify-content: flex-start;
+  margin-top: 0.2rem;
+}
+
+.branch-list,
+.admin-accounts {
+  gap: 0.55rem;
+}
+
+.branch-card,
+.admin-card {
+  border-radius: 8px;
+  padding: 0.72rem 0.8rem;
+}
+
+.branch-card {
+  gap: 0.65rem;
+}
+
+.admin-card {
+  min-height: 52px;
+}
+
+.branch-card-meta {
+  gap: 0.5rem 0.75rem;
+  padding-top: 0.65rem;
+}
+
+.branch-card-meta span {
+  font-size: 0.68rem;
+}
+
+.branch-code-pill,
+.branch-card-notes {
+  border-radius: 8px;
+}
+
+.branch-card-notes {
+  padding: 0.62rem 0.7rem;
+}
+
+.users-table {
+  min-width: 720px;
+}
+
+.users-table-actions {
+  gap: 0.35rem;
+}
+
+.branch-directory-modal {
+  gap: 0.9rem;
+}
+
+@media (max-width: 1080px) {
+  .users-management-grid,
+  .users-page > .card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .users-overview-grid,
+  .users-form,
+  .branch-form {
+    grid-template-columns: 1fr;
+  }
+
+  .users-overview-card {
+    border-right: 0;
+    border-bottom: 1px solid rgba(31, 45, 61, 0.08);
+  }
+
+  .users-overview-card:last-child {
+    border-bottom: 0;
+  }
+}

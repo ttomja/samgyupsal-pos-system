@@ -2070,3 +2070,117 @@
     justify-content: flex-start;
   }
 }
+
+.sales-history-panel {
+  gap: 0.75rem;
+  border-radius: 8px;
+  padding: 0.9rem;
+}
+
+.sales-history-panel-header {
+  align-items: center;
+}
+
+.sales-history-panel-header h2 {
+  font-size: 1.25rem;
+}
+
+.sales-history-panel-header .supporting-text {
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.sales-history-toolbar {
+  gap: 0.65rem;
+}
+
+.sales-history-filter-grid {
+  grid-template-columns: minmax(180px, 1.1fr) minmax(200px, 1.1fr) repeat(4, minmax(128px, 0.75fr));
+  gap: 0.55rem;
+  align-items: end;
+}
+
+.sales-history-field--wide {
+  grid-column: span 1;
+}
+
+.sales-history-field {
+  gap: 0.28rem;
+}
+
+.sales-history-field span {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+}
+
+.sales-history-field input,
+.sales-history-select .select-menu-trigger {
+  min-height: 38px;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+}
+
+.sales-history-select .select-menu-dropdown,
+.sales-history-suggestion-list {
+  border-radius: 8px;
+}
+
+.sales-history-combobox-toggle {
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 8px;
+}
+
+.sales-history-reset {
+  min-height: 38px;
+  justify-self: start;
+}
+
+.sales-history-export-actions {
+  gap: 0.5rem;
+}
+
+.sales-history-table-shell {
+  border-radius: 8px;
+}
+
+.sales-history-table {
+  min-width: 1120px;
+}
+
+.sales-history-table th,
+.sales-history-table td {
+  padding: 0.62rem 0.72rem;
+}
+
+.sales-history-table thead th {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+}
+
+.sales-history-cell-primary {
+  gap: 0.12rem;
+}
+
+.sales-history-cell-primary span {
+  font-size: 0.78rem;
+}
+
+.sales-history-action {
+  min-height: 34px;
+  border-radius: 8px;
+  padding: 0.42rem 0.58rem;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 1320px) {
+  .sales-history-filter-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .sales-history-filter-grid {
+    grid-template-columns: 1fr;
+  }
+}
