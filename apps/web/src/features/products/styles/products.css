@@ -16,22 +16,23 @@
 
 .products-overview-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0;
   overflow: hidden;
   border: 1px solid rgba(89, 67, 48, 0.1);
-  border-radius: 12px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.92);
 }
 
 .products-overview-card {
   display: grid;
-  grid-template-columns: minmax(12rem, 0.75fr) minmax(9rem, 0.42fr) minmax(14rem, 1fr);
-  gap: 1rem;
-  align-items: center;
-  padding: 0.8rem 1rem;
+  grid-template-columns: 1fr;
+  gap: 0.25rem;
+  align-content: start;
+  padding: 0.75rem 0.85rem;
   border: 0;
-  border-bottom: 1px solid rgba(89, 67, 48, 0.08);
+  border-right: 1px solid rgba(31, 45, 61, 0.08);
+  border-bottom: 1px solid rgba(31, 45, 61, 0.08);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -50,11 +51,11 @@
 }
 
 .products-overview-card strong {
-  font-size: 1.35rem;
+  font-size: 1.55rem;
   font-variant-numeric: tabular-nums;
   line-height: 1;
   color: var(--text-strong);
-  text-align: right;
+  text-align: left;
 }
 
 .products-overview-meta {
@@ -106,8 +107,8 @@
 .products-search-input {
   width: 100%;
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 0.9rem 1rem;
+  border-radius: 8px;
+  padding: 0.75rem 0.85rem;
   background: #ffffff;
 }
 
@@ -161,7 +162,7 @@
   padding: 0.85rem 1rem;
   background: #ffffff;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 8px;
 }
 
 .category-item-info {
@@ -177,8 +178,8 @@
 
 .products-secondary-action {
   border: 1px solid rgba(166, 63, 20, 0.16);
-  border-radius: 14px;
-  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  padding: 0.72rem 0.9rem;
   background: #ffffff;
   color: #5f422d;
   font-weight: 700;
@@ -259,8 +260,8 @@
 
 .products-table-action {
   border: 1px solid rgba(127, 29, 29, 0.14);
-  border-radius: 12px;
-  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
   background: rgba(255, 244, 244, 0.96);
   color: #8c2020;
   font-weight: 700;
@@ -273,8 +274,8 @@
 
 .products-table-edit-action {
   border: 1px solid rgba(166, 63, 20, 0.14);
-  border-radius: 12px;
-  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
   background: #ffffff;
   color: #5f422d;
   font-weight: 700;
@@ -393,10 +394,6 @@
 
   .products-overview-card {
     grid-template-columns: 1fr;
-  }
-
-  .products-overview-card strong {
-    text-align: left;
   }
 
   .products-toolbar {

@@ -1,13 +1,14 @@
 .dashboard-page {
-  gap: 1rem;
+  gap: 0.9rem;
 }
 
 .dashboard-metrics-grid,
 .dashboard-page .card-grid {
-  display: block;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--surface-strong);
   box-shadow: var(--shadow-soft);
 }
@@ -15,21 +16,22 @@
 .dashboard-metrics-grid .info-card,
 .dashboard-page .card-grid .info-card {
   display: grid;
-  grid-template-columns: minmax(12rem, 0.9fr) minmax(9rem, 0.45fr) minmax(14rem, 1fr);
-  gap: 1rem;
-  align-items: center;
-  min-height: 64px;
+  grid-template-columns: 1fr;
+  gap: 0.35rem;
+  align-content: start;
+  min-height: 108px;
   border: 0;
-  border-bottom: 1px solid rgba(89, 67, 48, 0.08);
+  border-right: 1px solid rgba(31, 45, 61, 0.08);
+  border-bottom: 1px solid rgba(31, 45, 61, 0.08);
   border-radius: 0;
-  padding: 0.85rem 1rem;
+  padding: 0.85rem 0.95rem;
   background: transparent;
   box-shadow: none;
 }
 
 .dashboard-metrics-grid .info-card:last-child,
 .dashboard-page .card-grid .info-card:last-child {
-  border-bottom: 0;
+  border-right: 0;
 }
 
 .dashboard-metrics-grid .info-card .card-label,
@@ -42,10 +44,10 @@
   margin: 0;
   overflow: hidden;
   color: var(--text-strong);
-  font-size: 1.45rem;
+  font-size: 1.75rem;
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
-  text-align: right;
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -74,13 +76,19 @@
   display: grid;
   gap: 0.75rem;
   min-width: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow: var(--shadow-soft);
 }
 
+.dashboard-watchlist-panel > .card-label,
+.dashboard-watchlist-panel > .dashboard-panel-title {
+  padding-inline: 0.1rem;
+}
+
 .dashboard-panel-title {
-  margin: 0.35rem 0 0;
+  margin: 0;
   color: #2a1e17;
+  font-size: 1.05rem;
 }
 
 .dashboard-list {
@@ -91,20 +99,20 @@
   gap: 0;
   overflow: hidden;
   border: 1px solid rgba(89, 67, 48, 0.08);
-  border-radius: 12px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.92);
 }
 
 .dashboard-list-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(10rem, 0.4fr);
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.42fr);
   align-items: center;
   gap: 1rem;
-  min-height: 62px;
+  min-height: 54px;
   border: 0;
   border-bottom: 1px solid rgba(89, 67, 48, 0.08);
   border-radius: 0;
-  padding: 0.8rem 1rem;
+  padding: 0.65rem 0.85rem;
   background: transparent;
 }
 
@@ -115,7 +123,7 @@
 .dashboard-list-copy,
 .dashboard-list-meta {
   display: grid;
-  gap: 0.2rem;
+  gap: 0.18rem;
   min-width: 0;
 }
 
@@ -127,7 +135,7 @@
 .dashboard-list-copy span,
 .dashboard-list-meta span {
   color: var(--text-soft);
-  font-size: 0.92rem;
+  font-size: 0.84rem;
 }
 
 .dashboard-list-copy .status-badge {
@@ -156,8 +164,12 @@
 }
 
 .dashboard-metric-branch {
-  font-size: clamp(1.2rem, 2vw, 1.55rem);
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
   line-height: 1.2;
+}
+
+.dashboard-page > .notice-banner {
+  border-left: 4px solid rgba(160, 90, 36, 0.45);
 }
 
 @media (max-width: 1100px) {
@@ -167,8 +179,6 @@
 }
 
 @media (max-width: 720px) {
-  .dashboard-metrics-grid .info-card,
-  .dashboard-page .card-grid .info-card,
   .dashboard-list-item {
     grid-template-columns: 1fr;
   }
