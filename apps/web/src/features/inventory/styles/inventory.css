@@ -218,6 +218,8 @@
 }
 
 .inventory-toolbar {
+  position: relative;
+  z-index: 20;
   display: grid;
   gap: 0.75rem;
 }
@@ -227,7 +229,6 @@
   grid-template-columns: 1fr;
   gap: 0;
   align-items: stretch;
-  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: #ffffff;

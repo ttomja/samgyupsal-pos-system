@@ -64,6 +64,8 @@
 }
 
 .reports-filter-panel {
+  position: relative;
+  z-index: 20;
   grid-template-columns: 1fr;
   align-items: start;
   gap: 0.85rem;
