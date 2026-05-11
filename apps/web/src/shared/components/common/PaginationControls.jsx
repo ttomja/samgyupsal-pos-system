@@ -44,59 +44,57 @@ function PaginationControls({
         Showing {pageStart}-{pageEnd} of {totalItems} {summaryLabel}
       </p>
 
-      {totalPages > 1 ? (
-        <div className="app-pagination-controls">
-          <button
-            type="button"
-            className="app-pagination-button"
-            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            aria-label="Go to previous page"
-          >
-            Previous
-          </button>
+      <div className="app-pagination-controls">
+        <button
+          type="button"
+          className="app-pagination-button"
+          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+          disabled={currentPage === 1}
+          aria-label="Go to previous page"
+        >
+          Previous
+        </button>
 
-          {visibleItems.map((item) => {
-            if (typeof item !== 'number') {
-              return (
-                <span
-                  key={item}
-                  className="app-pagination-ellipsis"
-                >
-                  ...
-                </span>
-              )
-            }
-
+        {visibleItems.map((item) => {
+          if (typeof item !== 'number') {
             return (
-              <button
+              <span
                 key={item}
-                type="button"
-                className={
-                  item === currentPage
-                    ? 'app-pagination-button active'
-                    : 'app-pagination-button'
-                }
-                onClick={() => onPageChange(item)}
-                aria-label={`Go to page ${item}`}
-                aria-current={item === currentPage ? 'page' : undefined}
+                className="app-pagination-ellipsis"
               >
-                {item}
-              </button>
+                ...
+              </span>
             )
-          })}
+          }
 
-          <button
-            type="button"
-            className="app-pagination-button"
-            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages}
-            aria-label="Go to next page"
-          >
-            Next
-          </button>
-        </div>
-      ) : null}
+          return (
+            <button
+              key={item}
+              type="button"
+              className={
+                item === currentPage
+                  ? 'app-pagination-button active'
+                  : 'app-pagination-button'
+              }
+              onClick={() => onPageChange(item)}
+              aria-label={`Go to page ${item}`}
+              aria-current={item === currentPage ? 'page' : undefined}
+            >
+              {item}
+            </button>
+          )
+        })}
+
+        <button
+          type="button"
+          className="app-pagination-button"
+          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+          disabled={currentPage === totalPages}
+          aria-label="Go to next page"
+        >
+          Next
+        </button>
+      </div>
     </div>
   )
 }
