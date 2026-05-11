@@ -375,6 +375,23 @@ function ReportsPage() {
       ),
     },
   ]
+  const nearExpiryColumns = [
+    { key: 'item', label: 'Product Name' },
+    { key: 'batch', label: 'Batch' },
+    { key: 'stock', label: 'Current Stock' },
+    { key: 'expiryDate', label: 'Expiry Date' },
+    { key: 'daysToExpiry', label: 'Days Left' },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (row) => (
+        <StatusBadge
+          text={row.status}
+          variant={String(row.status || '').toLowerCase().includes('expired') ? 'critical' : 'warning'}
+        />
+      ),
+    },
+  ]
   return (
     <section className="reports-page">
       <div className="reports-topbar">
@@ -602,6 +619,15 @@ function ReportsPage() {
             title="Sales velocity alerts"
             pageSize={6}
             summaryLabel="stockout alerts"
+          />
+
+          <TopItemsTable
+            columns={nearExpiryColumns}
+            rows={reportData.nearExpiry || []}
+            eyebrow="Near-Expiry Batches"
+            title="Expiry-based batch table"
+            pageSize={6}
+            summaryLabel="batch rows"
           />
 
           <TopItemsTable

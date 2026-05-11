@@ -1788,8 +1788,6 @@
 .product-grid {
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 0.65rem;
-  max-height: min(62vh, 720px);
-  overflow-y: auto;
   padding: 0.05rem 0.25rem 0.15rem 0;
 }
 

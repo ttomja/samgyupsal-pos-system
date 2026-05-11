@@ -27,7 +27,7 @@ import {
   isEmployeeUser,
 } from '../../../shared/utils/permissions'
 
-const PRODUCTS_PER_PAGE = 12
+const PRODUCTS_PER_PAGE = 9
 const POS_PAGE_STATE_KEY = 'page-state:pos'
 
 function buildPaginationItems(currentPage, totalPages) {
