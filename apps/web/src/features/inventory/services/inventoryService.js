@@ -1248,10 +1248,35 @@ export function isLowStock(item) {
 }
 
 export function isNearExpiry(item) {
-  return item.days_to_expiry != null && Number(item.days_to_expiry) <= NEAR_EXPIRY_DAYS
+  const daysToExpiry = Number(item.days_to_expiry)
+
+  return (
+    item.days_to_expiry != null &&
+    Number.isFinite(daysToExpiry) &&
+    daysToExpiry >= 0 &&
+    daysToExpiry <= NEAR_EXPIRY_DAYS
+  )
+}
+
+export function isExpired(item) {
+  const daysToExpiry = Number(item.days_to_expiry)
+
+  return (
+    item.days_to_expiry != null &&
+    Number.isFinite(daysToExpiry) &&
+    daysToExpiry < 0
+  )
 }
 
 export function getInventoryStatus(item) {
+  if (isLowStock(item) && isExpired(item)) {
+    return { label: 'Low Stock & Expired', tone: 'critical' }
+  }
+
+  if (isExpired(item)) {
+    return { label: 'Expired', tone: 'critical' }
+  }
+
   if (isLowStock(item) && isNearExpiry(item)) {
     return { label: 'Low Stock & Near Expiry', tone: 'critical' }
   }
