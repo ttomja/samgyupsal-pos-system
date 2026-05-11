@@ -212,6 +212,20 @@ function PaymentPanel({
       return
     }
 
+    const unavailableCartItem = cart.find((item) => item.isSellable === false)
+
+    if (unavailableCartItem) {
+      setMessage(
+        `${unavailableCartItem.name || 'This item'} cannot be sold${
+          unavailableCartItem.availabilityReason
+            ? ` because it is ${String(unavailableCartItem.availabilityReason).toLowerCase()}`
+            : ''
+        }. Remove it from the cart to continue.`,
+      )
+      setMessageTone('error')
+      return
+    }
+
     const validation = validateCheckout({
       paymentMethod,
       amountReceived: cashReceived,

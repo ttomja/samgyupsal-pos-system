@@ -91,6 +91,7 @@ function ProductGrid({ products, cart = [], setCart, onProductAdded }) {
         const qualityFlags = [
           unitValue ? null : 'Missing unit',
           isPriceNotSet ? 'Needs price' : null,
+          product.hasExpiredBlockingBatch ? 'Expired' : null,
           isOutOfStock ? 'No stock' : null,
         ].filter(Boolean)
         const stockLabel = product.isSellable === false && !isPriceNotSet

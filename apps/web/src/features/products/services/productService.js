@@ -82,6 +82,60 @@ function normalizeCatalogProduct(product, index) {
   }
 }
 
+function getDateOnlyValue(value) {
+  const normalizedValue = String(value || '').trim()
+
+  if (!normalizedValue) {
+    return Number.POSITIVE_INFINITY
+  }
+
+  const parsedDate = new Date(`${normalizedValue}T00:00:00`)
+
+  return Number.isNaN(parsedDate.getTime())
+    ? Number.POSITIVE_INFINITY
+    : parsedDate.getTime()
+}
+
+function getTodayDateOnlyValue() {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return today.getTime()
+}
+
+function getBatchQuantity(batch = {}) {
+  const quantity = Number(batch.quantity_on_hand ?? batch.stock_quantity ?? 0)
+  return Number.isFinite(quantity) ? Math.max(0, quantity) : 0
+}
+
+function getBatchExpirationDate(batch = {}) {
+  return String(batch.expiration_date || batch.expiry_date || '').trim()
+}
+
+function getAvailableBatches(product = {}) {
+  return Array.isArray(product.batches)
+    ? product.batches
+        .filter((batch) => getBatchQuantity(batch) > 0)
+        .sort(
+          (leftBatch, rightBatch) =>
+            getDateOnlyValue(getBatchExpirationDate(leftBatch)) -
+              getDateOnlyValue(getBatchExpirationDate(rightBatch)) ||
+            getDateOnlyValue(leftBatch.stock_in_date) -
+              getDateOnlyValue(rightBatch.stock_in_date) ||
+            Number(leftBatch.id || 0) - Number(rightBatch.id || 0),
+        )
+    : []
+}
+
+function isBatchExpired(batch = {}) {
+  const expirationDate = getBatchExpirationDate(batch)
+
+  if (!expirationDate) {
+    return false
+  }
+
+  return getDateOnlyValue(expirationDate) < getTodayDateOnlyValue()
+}
+
 function normalizeInventoryProduct(product, index) {
   const productId = product.product_id ?? product.id ?? product._id ?? product.productId
   const categoryName = resolvePreferredCategoryLabel(
@@ -93,6 +147,20 @@ function normalizeInventoryProduct(product, index) {
   const branchId =
     product.branch_id ??
     (branchName === 'Dollar' ? 2 : branchName === 'Sta. Lucia' ? 1 : null)
+  const availableBatches = getAvailableBatches(product)
+  const firstAvailableBatch = availableBatches[0] || null
+  const hasBatchRecords = availableBatches.length > 0
+  const hasExpiredBlockingBatch =
+    firstAvailableBatch != null && isBatchExpired(firstAvailableBatch)
+  const sellableStockQuantity = hasBatchRecords
+    ? hasExpiredBlockingBatch
+      ? 0
+      : availableBatches.reduce(
+          (total, batch) =>
+            total + (isBatchExpired(batch) ? 0 : getBatchQuantity(batch)),
+          0,
+        )
+    : Number(product.stock_quantity ?? 0)
 
   const normalizedProduct = {
     id: productId ? String(productId) : null,
@@ -116,7 +184,10 @@ function normalizeInventoryProduct(product, index) {
         0,
     ),
     unit: product.unit_label || product.net_weight || '',
-    stockQuantity: Number(product.stock_quantity ?? 0),
+    stockQuantity: sellableStockQuantity,
+    totalStockQuantity: Number(product.stock_quantity ?? 0),
+    hasExpiredBlockingBatch,
+    expiryDate: product.expiry_date || product.expiration_date || '',
     is_active: product.is_active ?? product.isActive ?? true,
   }
   const sellability = deriveProductSellability(normalizedProduct)
@@ -124,6 +195,12 @@ function normalizeInventoryProduct(product, index) {
   return {
     ...normalizedProduct,
     ...sellability,
+    ...(hasExpiredBlockingBatch
+      ? {
+          isSellable: false,
+          availabilityReason: 'Expired',
+        }
+      : {}),
   }
 }
 
@@ -180,28 +257,12 @@ export async function getProducts(options = {}) {
   }
 
   if (isSupabaseDataEnabled) {
-    const supabase = getSupabaseClient()
-    let query = supabase
-      .from(supabaseViews.inventoryCatalog)
-      .select('*')
-      .order('product_name', { ascending: true })
-
-    if (options.branchId != null && String(options.branchId).trim() !== '') {
-      query = query.eq('branch_id', Number(options.branchId))
-    }
-
-    const { data, error } = await query
-
-    if (error) {
-      throw createSupabaseServiceError(
-        error,
-        'Unable to load products from Supabase.',
-      )
-    }
+    const inventoryResponse = await getInventoryItems(options)
+    const inventoryItems = inventoryResponse.items || inventoryResponse
 
     return setCachedResource(
       getProductsCacheKey(options),
-      extractProductArray(data)
+      extractProductArray(inventoryItems)
       .map(normalizeInventoryProduct)
       .filter((product) => Boolean(product.id)),
     )
