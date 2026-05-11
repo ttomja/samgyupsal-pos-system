@@ -960,13 +960,15 @@ function InventoryPage() {
                       activeCategory: event.target.value,
                     })
                   }
-                  disabled={isLoading || filterCategoryOptions.length === 0}
+                  disabled={isLoading}
                   options={[
                     { value: INVENTORY_FILTER_ALL, label: 'All Categories' },
-                    ...filterCategoryOptions.map((category) => ({
-                      value: category,
-                      label: category,
-                    })),
+                    ...Array.from(new Set([...productCategoryOptions, ...filterCategoryOptions]))
+                      .sort()
+                      .map((category) => ({
+                        value: category,
+                        label: category,
+                      })),
                   ]}
                 />
               </label>

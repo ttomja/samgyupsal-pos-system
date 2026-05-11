@@ -154,7 +154,7 @@ export function resolveInventoryFilterResults({
   const resolvedCategory =
     categoryOptions.find(
       (option) => normalizeFilterText(option) === normalizeFilterText(category),
-    ) || INVENTORY_FILTER_ALL
+    ) || (normalizeFilterText(category) === normalizeFilterText(INVENTORY_FILTER_ALL) ? INVENTORY_FILTER_ALL : category)
   const categoryItems = filterInventoryItemsByCategory(branchItems, resolvedCategory)
   const statusItems = sortInventoryItems(
     filterInventoryItemsByStatus(categoryItems, status),

@@ -600,6 +600,8 @@ function ReportsPage() {
               rows={reportData.topItems}
               eyebrow="Top-Selling Items"
               title="Best performers"
+              pageSize={10}
+              summaryLabel="items"
             />
 
             <TopItemsTable
@@ -635,6 +637,8 @@ function ReportsPage() {
             rows={reportData.cashierPerformance}
             eyebrow="Sales by Cashier"
             title="Cashier performance"
+            pageSize={10}
+            summaryLabel="cashiers"
           />
         </>
       )}
