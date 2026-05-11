@@ -460,7 +460,7 @@ function PosPage() {
             <span className="meta-secondary">{cashierRoleLabel}</span>
           </article>
 
-          <article className="pos-meta-card">
+          <article className="pos-meta-card pos-meta-card--branch">
             <span className="meta-label">Branch Scope</span>
             <strong className="meta-primary">
               {activeBranch?.name || user?.branchName || 'All Branches'}

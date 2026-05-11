@@ -1590,10 +1590,12 @@
 
 .pos-meta-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: visible;
   border-radius: 8px;
 }
 
 .pos-meta-card {
+  position: relative;
   grid-template-columns: 1fr;
   align-content: start;
   gap: 0.28rem;
@@ -1602,6 +1604,10 @@
   border-right: 1px solid rgba(89, 67, 48, 0.08);
   border-bottom: 0;
   padding: 0.8rem 0.9rem;
+}
+
+.pos-meta-card--branch {
+  z-index: 20;
 }
 
 .pos-meta-card:last-child {
@@ -1656,6 +1662,12 @@
 .pos-branch-select .select-menu-trigger {
   min-height: 38px;
   padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+}
+
+.pos-branch-select .select-menu-dropdown {
+  z-index: 1000;
+  min-width: 100%;
   border-radius: 8px;
 }
 
