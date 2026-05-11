@@ -56,6 +56,9 @@ export const supabaseRpc = {
   adjustInventoryStockCount:
     runtimeEnv.VITE_SUPABASE_ADJUST_INVENTORY_STOCK_RPC ||
     'adjust_inventory_stock_count',
+  updateInventoryBatchExpiration:
+    runtimeEnv.VITE_SUPABASE_UPDATE_INVENTORY_BATCH_EXPIRATION_RPC ||
+    'update_inventory_batch_expiration',
 }
 
 export const supabaseRuntime = {

@@ -613,6 +613,40 @@ async function adjustSupabaseInventoryStockCount(
   return data
 }
 
+async function updateSupabaseInventoryBatchExpiration(
+  productId,
+  branchId,
+  expirationDate,
+) {
+  const supabase = getSupabaseClient()
+  const { data, error } = await supabase.rpc(
+    supabaseRpc.updateInventoryBatchExpiration,
+    {
+      p_product_id: Number(productId),
+      p_branch_id:
+        branchId != null && String(branchId).trim() !== ''
+          ? Number(branchId)
+          : null,
+      p_expiration_date: expirationDate || null,
+    },
+  )
+
+  if (error) {
+    if (isMissingSupabaseResourceError(error)) {
+      throw new Error(
+        'Batch expiry editing is not installed yet. Run apps/web/supabase/sql/23_update_inventory_batch_expiry.sql in Supabase, then try Save Changes again.',
+      )
+    }
+
+    throw createSupabaseServiceError(
+      error,
+      'Unable to update the active batch expiry date in Supabase.',
+    )
+  }
+
+  return data
+}
+
 export async function getInventoryItems(options = {}) {
   const cachedInventoryResponse = getCachedInventoryItems(options)
 
@@ -803,6 +837,14 @@ export async function updateInventoryItem(itemId, values) {
       ...payload,
     }
     delete productPayload.stock_quantity
+    const currentExpirationDate = resolveSupabaseExpirationDate({
+      expiration_date:
+        currentItem.earliest_expiration_date ||
+        currentItem.expiry_date ||
+        currentItem.expiration_date,
+    })
+    const shouldSyncBatchExpiration =
+      payload.expiration_date !== currentExpirationDate
 
     const { error } = await supabase
       .from(supabaseTables.products)
@@ -825,6 +867,14 @@ export async function updateInventoryItem(itemId, values) {
           expirationDate: payload.expiration_date,
           notes: 'Product edit stock count adjustment.',
         },
+      )
+    }
+
+    if (shouldSyncBatchExpiration) {
+      await updateSupabaseInventoryBatchExpiration(
+        productId,
+        productBranchId,
+        payload.expiration_date,
       )
     }
 
