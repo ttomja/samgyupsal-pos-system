@@ -15,6 +15,7 @@ import {
   getCachedResource,
   setCachedResource,
 } from '../../../shared/utils/resourceCache.js'
+import { emitDataRefresh } from '../../../shared/utils/dataRefreshEvents.js'
 import { normalizeSearchInput } from '../../../shared/utils/validation.js'
 import { applySaleToInventory } from '../../inventory/services/inventoryService.js'
 import { getDiscountConfig } from '../utils/discounts.js'
@@ -75,6 +76,9 @@ function invalidateCheckoutCaches() {
   invalidateSalesCaches()
   clearCachedResourceByPrefix('inventory:')
   clearCachedResourceByPrefix('products:')
+  emitDataRefresh({
+    source: 'sales',
+  })
 }
 
 function buildSalesCacheKey(namespace, options = {}) {

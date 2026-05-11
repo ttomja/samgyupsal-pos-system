@@ -13,6 +13,7 @@ import {
   setCachedResource,
 } from '../../../shared/utils/resourceCache'
 import { resolvePreferredCategoryLabel } from '../../../shared/utils/categoryUtils.js'
+import { emitDataRefresh } from '../../../shared/utils/dataRefreshEvents'
 
 const PRODUCTS_CACHE_PREFIX = 'products:'
 const PRODUCTS_CACHE_TTL_MS = 60 * 1000
@@ -142,6 +143,10 @@ function getProductCatalogCacheKey() {
 function invalidateProductCaches() {
   clearCachedResourceByPrefix(PRODUCTS_CACHE_PREFIX)
   clearCachedResourceByPrefix('inventory:')
+  clearCachedResourceByPrefix('reports:')
+  emitDataRefresh({
+    source: 'products',
+  })
 }
 
 export function getCachedProducts(options = {}) {

@@ -194,7 +194,11 @@
 
 .inventory-control-sections {
   display: grid;
-  grid-template-columns: minmax(13rem, 0.9fr) minmax(18rem, 1.25fr) minmax(17rem, 1.15fr);
+  grid-template-columns:
+    minmax(18rem, 1.3fr)
+    minmax(13rem, 0.9fr)
+    minmax(18rem, 1.25fr)
+    minmax(17rem, 1.15fr);
   gap: 0.85rem;
   align-items: stretch;
 }
@@ -230,6 +234,46 @@
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.inventory-search-control {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid rgba(166, 63, 20, 0.14);
+  border-radius: 16px;
+  padding: 0.6rem 0.95rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: #5f422d;
+}
+
+.inventory-search-control span {
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.inventory-search-control input {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+
+.inventory-search-clear {
+  justify-self: start;
+  border: 1px solid rgba(166, 63, 20, 0.14);
+  border-radius: 12px;
+  padding: 0.55rem 0.8rem;
+  background: #ffffff;
+  color: #5f422d;
+  cursor: pointer;
+  font-weight: 700;
 }
 
 .inventory-filter-group {

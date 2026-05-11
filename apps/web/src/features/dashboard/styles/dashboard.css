@@ -1,5 +1,5 @@
 .dashboard-page {
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .dashboard-metrics-grid {
@@ -13,6 +13,19 @@
   grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
   gap: 1rem;
   align-items: start;
+}
+
+.dashboard-watchlist-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.dashboard-watchlist-panel {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
 }
 
 .dashboard-panel-title {
@@ -43,6 +56,7 @@
 .dashboard-list-meta {
   display: grid;
   gap: 0.2rem;
+  min-width: 0;
 }
 
 .dashboard-list-copy strong,
@@ -56,8 +70,29 @@
   font-size: 0.92rem;
 }
 
+.dashboard-list-copy .status-badge {
+  justify-self: start;
+  max-width: 100%;
+}
+
 .dashboard-list-meta {
+  min-width: 7rem;
   text-align: right;
+}
+
+.dashboard-watchlist-item .dashboard-list-copy strong,
+.dashboard-watchlist-item .dashboard-list-meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard-watchlist-item .dashboard-list-copy strong {
+  white-space: nowrap;
+}
+
+.dashboard-watchlist-item .dashboard-list-meta span {
+  display: block;
+  white-space: normal;
 }
 
 .dashboard-metric-branch {
@@ -68,6 +103,10 @@
 @media (max-width: 1100px) {
   .dashboard-metrics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-watchlist-grid {
+    grid-template-columns: 1fr;
   }
 
   .dashboard-secondary-grid {

@@ -375,24 +375,6 @@ function ReportsPage() {
       ),
     },
   ]
-  const nearExpiryColumns = [
-    { key: 'item', label: 'Item' },
-    { key: 'batch', label: 'Batch' },
-    { key: 'expiryDate', label: 'Expiry' },
-    { key: 'daysToExpiry', label: 'Days Left' },
-    { key: 'stock', label: 'Stock' },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (row) => (
-        <StatusBadge
-          text={row.status}
-          variant={row.status === 'Expired' || row.status === 'Critical' ? 'critical' : 'attention'}
-        />
-      ),
-    },
-  ]
-
   return (
     <section className="reports-page">
       <div className="reports-topbar">
@@ -400,7 +382,7 @@ function ReportsPage() {
           <p className="eyebrow">Business Reporting</p>
           <h1>Reports</h1>
           <p className="supporting-text">
-            Review sales, inventory movement, FEFO stock risk, and branch-scoped performance in one workspace.
+            Review sales, inventory movement, stock risk, and branch-scoped performance in one workspace.
           </p>
         </div>
 
@@ -613,25 +595,14 @@ function ReportsPage() {
             />
           </div>
 
-          <div className="reports-table-grid">
-            <TopItemsTable
-              columns={predictiveStockoutColumns}
-              rows={reportData.predictiveStockout || []}
-              eyebrow="Predictive Stockout"
-              title="Sales velocity alerts"
-              pageSize={6}
-              summaryLabel="stockout alerts"
-            />
-
-            <TopItemsTable
-              columns={nearExpiryColumns}
-              rows={reportData.nearExpiry || []}
-              eyebrow="Near-Expiry Batches"
-              title="FEFO expiry watchlist"
-              pageSize={6}
-              summaryLabel="expiry alerts"
-            />
-          </div>
+          <TopItemsTable
+            columns={predictiveStockoutColumns}
+            rows={reportData.predictiveStockout || []}
+            eyebrow="Projected Stockout"
+            title="Sales velocity alerts"
+            pageSize={6}
+            summaryLabel="stockout alerts"
+          />
 
           <TopItemsTable
             columns={cashierColumns}

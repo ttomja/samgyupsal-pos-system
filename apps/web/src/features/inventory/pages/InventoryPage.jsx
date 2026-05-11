@@ -30,6 +30,7 @@ import {
 import {
   canAdjustInventoryStock,
   canManageInventoryCatalog,
+  canStockInInventory,
   isAdminUser,
 } from '../../../shared/utils/permissions'
 import {
@@ -53,13 +54,51 @@ const INITIAL_PRODUCT_FORM = {
 const INVENTORY_PAGE_SIZE = 10
 const INVENTORY_PAGE_STATE_KEY = 'page-state:inventory'
 
+function normalizeInventorySearchText(value) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+}
+
+function inventoryItemMatchesSearch(item, searchQuery) {
+  const normalizedQuery = normalizeInventorySearchText(searchQuery)
+
+  if (!normalizedQuery) {
+    return true
+  }
+
+  const searchableText = [
+    item.product_name,
+    item.name,
+    item.product,
+    item.barcode,
+    item.sku,
+    item.product_sku,
+    item.category_name,
+    item.category,
+    item.branch_name,
+    item.branch,
+    item.unit,
+    item.net_weight,
+  ]
+    .map(normalizeInventorySearchText)
+    .filter(Boolean)
+    .join(' ')
+
+  return normalizedQuery
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((token) => searchableText.includes(token))
+}
+
 function InventoryPage() {
   const { user } = useAuth()
   const inventoryRequestRef = useRef(0)
   const inventoryLoadScopeRef = useRef('')
   const isAdminInventoryView = isAdminUser(user)
   const canEditCatalog = canManageInventoryCatalog(user)
-  const canUpdateStock = canAdjustInventoryStock(user)
+  const canStockIn = canStockInInventory(user)
+  const canAdjustStock = canAdjustInventoryStock(user)
   const [branchOptions, setBranchOptions] = useState(() => getCachedBranches() || [])
   const [isBranchLoading, setIsBranchLoading] = useState(
     () => (getCachedBranches() || []).length === 0,
@@ -71,6 +110,7 @@ function InventoryPage() {
       activeBranchId: user?.branchId != null ? String(user.branchId) : '',
       activeFilter: INVENTORY_FILTER_ALL,
       activeCategory: INVENTORY_FILTER_ALL,
+      searchQuery: '',
       currentPage: 1,
     }),
   )
@@ -100,6 +140,7 @@ function InventoryPage() {
     (user?.branchId != null ? String(user.branchId) : '')
   const activeFilter = inventoryViewState?.activeFilter || INVENTORY_FILTER_ALL
   const activeCategory = inventoryViewState?.activeCategory || INVENTORY_FILTER_ALL
+  const searchQuery = inventoryViewState?.searchQuery || ''
   const currentPage = Math.max(1, Number(inventoryViewState?.currentPage || 1))
   const updateInventoryViewState = useCallback((patch) => {
     setInventoryViewState((currentState) => ({
@@ -265,7 +306,13 @@ function InventoryPage() {
   }, [activeCategory, inventoryFilterResults.resolvedCategory, updateInventoryViewState])
 
   const effectiveActiveCategory = inventoryFilterResults.resolvedCategory
-  const filteredItems = inventoryFilterResults.filteredItems
+  const filteredItems = useMemo(
+    () =>
+      inventoryFilterResults.filteredItems.filter((item) =>
+        inventoryItemMatchesSearch(item, searchQuery),
+      ),
+    [inventoryFilterResults.filteredItems, searchQuery],
+  )
 
   const totalPages = Math.max(
     1,
@@ -281,7 +328,7 @@ function InventoryPage() {
             currentPage: 1,
           }
     ))
-  }, [activeBranchId, activeCategory, activeFilter, updateInventoryViewState])
+  }, [activeBranchId, activeCategory, activeFilter, searchQuery, updateInventoryViewState])
 
   const totalBranchItems = inventoryFilterResults.branchItems.length
   const filterCategoryOptions = inventoryFilterResults.categoryOptions
@@ -328,7 +375,7 @@ function InventoryPage() {
     if (!canEditCatalog) {
       setFeedbackTone('warning')
       setFeedbackMessage(
-        'Employee accounts can update stock quantities only for their assigned branch.',
+        'Employee accounts can view assigned-branch inventory and record stock-in actions only.',
       )
       return
     }
@@ -350,7 +397,7 @@ function InventoryPage() {
     if (!canEditCatalog) {
       setFeedbackTone('warning')
       setFeedbackMessage(
-        'Employee accounts cannot edit product details. Use Stock In or Adjust Stock instead.',
+        'Employee accounts cannot edit product details. Use Stock In when inventory needs to be received.',
       )
       return
     }
@@ -465,6 +512,18 @@ function InventoryPage() {
   }
 
   const handleOpenQuantityDialog = (type, item) => {
+    if (type === 'adjust-stock' && !canAdjustStock) {
+      setFeedbackTone('warning')
+      setFeedbackMessage('Only administrator accounts can adjust stock counts.')
+      return
+    }
+
+    if (type === 'stock-in' && !canStockIn) {
+      setFeedbackTone('warning')
+      setFeedbackMessage('Your account cannot record stock-in actions.')
+      return
+    }
+
     setFeedbackMessage('')
     setQuantityError('')
     setSelectedItem(item)
@@ -506,6 +565,16 @@ function InventoryPage() {
   const handleSubmitQuantityDialog = async (event) => {
     event.preventDefault()
 
+    if (quantityDialog === 'adjust-stock' && !canAdjustStock) {
+      setQuantityError('Only administrator accounts can adjust stock counts.')
+      return
+    }
+
+    if (quantityDialog === 'stock-in' && !canStockIn) {
+      setQuantityError('Your account cannot record stock-in actions.')
+      return
+    }
+
     const validation = validateInventoryQuantityAction({
       selectedItem,
       quantityValue,
@@ -524,7 +593,7 @@ function InventoryPage() {
         parsedAmount > Number(selectedItem?.stock_quantity || 0))
 
     if (requiresBatchExpiry && !quantityExpiryDate) {
-      setQuantityError('Select an expiration date for the FEFO batch.')
+      setQuantityError('Select an expiration date for the inventory batch.')
       return
     }
 
@@ -532,6 +601,7 @@ function InventoryPage() {
       const updatedItem = await updateInventoryStock(selectedItem.id, parsedAmount, {
         mode: quantityDialog,
         expirationDate: quantityExpiryDate,
+        user,
       })
 
       setInventoryItems((previousItems) =>
@@ -619,7 +689,7 @@ function InventoryPage() {
           <p className="supporting-text">
             {isAdminInventoryView
               ? 'Manage stock, expiry dates, and branch inventory.'
-              : 'Update stock quantities for your assigned branch and monitor low-stock items.'}
+              : 'View assigned branch inventory and monitor low-stock items.'}
           </p>
         </div>
 
@@ -640,7 +710,7 @@ function InventoryPage() {
             <span className="meta-label">Visible Products</span>
             <strong className="meta-primary">{filteredItems.length}</strong>
             <span className="meta-secondary">
-              Based on current filters.
+              Based on filters and search.
             </span>
           </article>
 
@@ -663,9 +733,9 @@ function InventoryPage() {
             ) : (
               <article className="inventory-meta-card">
                 <span className="meta-label">Stock Permission</span>
-                <strong className="meta-primary">Stock Only</strong>
+                <strong className="meta-primary">Stock In Only</strong>
                 <span className="meta-secondary">
-                  Employee accounts can use Stock In and Adjust Stock for their assigned branch.
+                  Manual stock adjustment is reserved for administrators.
                 </span>
               </article>
             )}
@@ -745,6 +815,45 @@ function InventoryPage() {
 
         <div className="inventory-toolbar">
           <div className="inventory-control-sections">
+            <section className="inventory-control-section inventory-control-section--search">
+              <div className="inventory-control-section-header">
+                <strong>Product Search</strong>
+                <span>{searchQuery ? 'Filtered' : 'All products'}</span>
+              </div>
+
+              <label className="inventory-search-control" htmlFor="inventory-product-search">
+                <span>Search</span>
+                <input
+                  id="inventory-product-search"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) =>
+                    updateInventoryViewState({
+                      searchQuery: event.target.value,
+                    })
+                  }
+                  placeholder="Search product name, barcode, or category..."
+                  disabled={isLoading}
+                  autoComplete="off"
+                />
+              </label>
+
+              {searchQuery ? (
+                <button
+                  type="button"
+                  className="inventory-search-clear"
+                  onClick={() =>
+                    updateInventoryViewState({
+                      searchQuery: '',
+                    })
+                  }
+                  disabled={isLoading}
+                >
+                  Clear Search
+                </button>
+              ) : null}
+            </section>
+
             <section className="inventory-control-section">
               <div className="inventory-control-section-header">
                 <strong>Branch Scope</strong>
@@ -878,11 +987,18 @@ function InventoryPage() {
           <InventoryTable
             items={paginatedItems}
             canEditCatalog={canEditCatalog}
-            canUpdateStock={canUpdateStock}
+            canStockIn={canStockIn}
+            canAdjustStock={canAdjustStock}
             onStockIn={(item) => handleOpenQuantityDialog('stock-in', item)}
             onEdit={handleOpenEditProduct}
             onAdjustStock={(item) => handleOpenQuantityDialog('adjust-stock', item)}
             onRemove={handleOpenRemoveDialog}
+            emptyTitle={searchQuery ? 'No products match this search' : undefined}
+            emptyDescription={
+              searchQuery
+                ? 'Try a different product name, barcode, category, or branch keyword.'
+                : undefined
+            }
           />
 
           {filteredItems.length > 0 ? (

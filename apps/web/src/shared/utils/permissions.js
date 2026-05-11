@@ -102,8 +102,12 @@ export function canManageInventoryCatalog(user) {
   return isAdminUser(user)
 }
 
-export function canAdjustInventoryStock(user) {
+export function canStockInInventory(user) {
   return isAdminUser(user) || isEmployeeUser(user)
+}
+
+export function canAdjustInventoryStock(user) {
+  return isAdminUser(user)
 }
 
 export function canAccessAppSection(user, sectionKey) {

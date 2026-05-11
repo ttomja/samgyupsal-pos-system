@@ -84,17 +84,20 @@ function getStockTone(item) {
 function InventoryTable({
   items,
   canEditCatalog = true,
-  canUpdateStock = true,
+  canStockIn = true,
+  canAdjustStock = true,
   onStockIn,
   onEdit,
   onAdjustStock,
   onRemove,
+  emptyTitle = 'No inventory records match this filter',
+  emptyDescription = 'Try switching the filter to view more stocked or expiring items.',
 }) {
   if (items.length === 0) {
     return (
       <EmptyState
-        title="No inventory records match this filter"
-        description="Try switching the filter to view more stocked or expiring items."
+        title={emptyTitle}
+        description={emptyDescription}
       />
     )
   }
@@ -123,7 +126,7 @@ function InventoryTable({
           stockQuantity > 0 ? null : 'No stock',
         ].filter(Boolean)
         const actionButtons = [
-          canUpdateStock
+          canStockIn
             ? {
                 key: 'stock-in',
                 label: 'Stock In',
@@ -139,7 +142,7 @@ function InventoryTable({
                 variant: '',
               }
             : null,
-          canUpdateStock
+          canAdjustStock
             ? {
                 key: 'adjust-stock',
                 label: 'Adjust Stock',

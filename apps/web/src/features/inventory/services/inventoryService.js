@@ -23,6 +23,11 @@ import {
   getStoredInventoryItems,
   saveStoredInventoryItems,
 } from '../../../shared/utils/storage.js'
+import { emitDataRefresh } from '../../../shared/utils/dataRefreshEvents.js'
+import {
+  canAdjustInventoryStock,
+  canStockInInventory,
+} from '../../../shared/utils/permissions.js'
 
 const LOW_STOCK_THRESHOLD = 10
 const NEAR_EXPIRY_DAYS = 30
@@ -42,6 +47,23 @@ function invalidateInventoryQueryCaches() {
   clearCachedResourceByPrefix(INVENTORY_CACHE_PREFIX)
   clearCachedResourceByPrefix('products:')
   clearCachedResourceByPrefix('reports:')
+  emitDataRefresh({
+    source: 'inventory',
+  })
+}
+
+function assertInventoryStockActionPermission(mode, user) {
+  if (!user) {
+    return
+  }
+
+  if (mode === 'adjust-stock' && !canAdjustInventoryStock(user)) {
+    throw new Error('Only administrator accounts can adjust stock counts.')
+  }
+
+  if (mode === 'stock-in' && !canStockInInventory(user)) {
+    throw new Error('Your account cannot record stock-in actions.')
+  }
 }
 
 function isMissingSupabaseResourceError(error) {
@@ -484,7 +506,7 @@ async function stockInSupabaseInventoryBatch(
   const expirationDate = resolveSupabaseExpirationDate(values)
 
   if (!expirationDate) {
-    throw new Error('Select an expiration date before adding FEFO stock.')
+    throw new Error('Select an expiration date before adding batch stock.')
   }
 
   const supabase = getSupabaseClient()
@@ -706,7 +728,7 @@ export async function createInventoryItem(values, existingItems = []) {
 
     if (initialStockQuantity > 0 && !payload.expiration_date) {
       throw new Error(
-        'Enter an expiration date before saving initial stock as a FEFO batch.',
+        'Enter an expiration date before saving initial stock as an inventory batch.',
       )
     }
 
@@ -729,7 +751,7 @@ export async function createInventoryItem(values, existingItems = []) {
     if (initialStockQuantity > 0) {
       await stockInSupabaseInventoryBatch(data.id, branchId, initialStockQuantity, {
         expirationDate: payload.expiration_date,
-        notes: 'Initial product stock recorded as an opening FEFO batch.',
+        notes: 'Initial product stock recorded as an opening inventory batch.',
       })
     }
 
@@ -842,6 +864,8 @@ export async function updateInventoryItem(itemId, values) {
 export async function updateInventoryStock(itemId, quantityValue, options = {}) {
   const numericQuantity = Number(quantityValue || 0)
   const mode = options.mode === 'adjust-stock' ? 'adjust-stock' : 'stock-in'
+
+  assertInventoryStockActionPermission(mode, options.user)
 
   if (!Number.isFinite(numericQuantity)) {
     throw new Error('Enter a valid stock quantity to continue.')

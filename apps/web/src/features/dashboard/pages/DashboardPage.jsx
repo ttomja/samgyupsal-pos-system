@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import EmptyState from '../../../shared/components/common/EmptyState'
 import Loader from '../../../shared/components/common/Loader'
 import NoticeBanner from '../../../shared/components/common/NoticeBanner'
+import StatusBadge from '../../../shared/components/common/StatusBadge'
 import {
   getBranches,
   getCachedBranches,
@@ -25,8 +26,11 @@ import {
   ROLE_EMPLOYEE,
   isAdminUser,
 } from '../../../shared/utils/permissions'
+import { subscribeToDataRefresh } from '../../../shared/utils/dataRefreshEvents'
 import useAuth from '../../auth/hooks/useAuth'
 import '../styles/dashboard.css'
+
+const DASHBOARD_REFRESH_INTERVAL_MS = 60 * 1000
 
 function getTodayRange() {
   const today = new Date().toISOString().slice(0, 10)
@@ -75,80 +79,189 @@ function buildInitialDashboardSnapshot(user, isAdmin) {
   }
 }
 
+function getWatchlistStatusVariant(status) {
+  const normalizedStatus = String(status || '').toLowerCase()
+
+  if (
+    normalizedStatus.includes('critical') ||
+    normalizedStatus.includes('expired') ||
+    normalizedStatus.includes('out of stock')
+  ) {
+    return 'critical'
+  }
+
+  if (
+    normalizedStatus.includes('watch') ||
+    normalizedStatus.includes('near') ||
+    normalizedStatus.includes('reorder')
+  ) {
+    return 'warning'
+  }
+
+  return 'attention'
+}
+
+function getWatchlistRowMeta(row, type) {
+  if (type === 'expiry') {
+    return {
+      value: row.daysToExpiry,
+      note: `${row.batch} - ${row.stock} in stock`,
+    }
+  }
+
+  if (type === 'stockout') {
+    return {
+      value: row.estimatedDaysBeforeStockout,
+      note: `Stock ${row.stock} - ${row.estimatedStockoutDate}`,
+    }
+  }
+
+  return {
+    value: row.stock,
+    note: `Reorder at ${row.reorderLevel}`,
+  }
+}
+
+function WatchlistPanel({
+  eyebrow,
+  title,
+  rows,
+  type,
+  emptyTitle,
+  emptyDescription,
+}) {
+  const visibleRows = rows.slice(0, 5)
+
+  return (
+    <article className="panel dashboard-watchlist-panel">
+      <p className="card-label">{eyebrow}</p>
+      <h3 className="dashboard-panel-title">{title}</h3>
+
+      {visibleRows.length === 0 ? (
+        <EmptyState title={emptyTitle} description={emptyDescription} />
+      ) : (
+        <ul className="dashboard-list dashboard-watchlist-list">
+          {visibleRows.map((row) => {
+            const rowMeta = getWatchlistRowMeta(row, type)
+
+            return (
+              <li key={row.id} className="dashboard-list-item dashboard-watchlist-item">
+                <div className="dashboard-list-copy">
+                  <strong>{row.item}</strong>
+                  <StatusBadge
+                    text={row.status}
+                    variant={getWatchlistStatusVariant(row.status)}
+                  />
+                </div>
+                <div className="dashboard-list-meta">
+                  <strong>{rowMeta.value}</strong>
+                  <span>{rowMeta.note}</span>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </article>
+  )
+}
+
 function DashboardPage() {
   const { user } = useAuth()
   const isAdmin = isAdminUser(user)
+  const userBranchId = user?.branchId ?? null
+  const userId = user?.id ?? null
   const [snapshot, setSnapshot] = useState(() =>
     buildInitialDashboardSnapshot(user, isAdmin),
   )
 
+  const loadDashboardSnapshot = useCallback(async (showLoading = true) => {
+    if (showLoading) {
+      setSnapshot((previousSnapshot) => ({
+        ...previousSnapshot,
+        isLoading:
+          previousSnapshot.branches.length === 0 &&
+          previousSnapshot.inventoryItems.length === 0 &&
+          previousSnapshot.accounts.length === 0 &&
+          !previousSnapshot.report,
+      }))
+    }
+
+    const inventoryScope =
+      isAdmin || !userBranchId
+        ? {}
+        : { branchId: userBranchId }
+    const reportScope = isAdmin
+      ? {}
+      : {
+          ...getTodayRange(),
+          branchId: userBranchId,
+          cashierId: userId,
+        }
+
+    const [
+      branchesResult,
+      inventoryResult,
+      directoryResult,
+      reportResult,
+    ] = await Promise.allSettled([
+      getBranches(),
+      getInventoryItems(inventoryScope),
+      isAdmin
+        ? isSupabaseAuthEnabled
+          ? getProfilesDirectory()
+          : Promise.resolve(getLocalUsers())
+        : Promise.resolve([]),
+      getReportSnapshot(reportScope),
+    ])
+
+    setSnapshot({
+      isLoading: false,
+      hasPartialError: [
+        branchesResult,
+        inventoryResult,
+        directoryResult,
+        reportResult,
+      ].some((result) => result.status === 'rejected'),
+      branches:
+        branchesResult.status === 'fulfilled' ? branchesResult.value : [],
+      inventoryItems:
+        inventoryResult.status === 'fulfilled'
+          ? inventoryResult.value.items || inventoryResult.value
+          : [],
+      accounts:
+        directoryResult.status === 'fulfilled' ? directoryResult.value : [],
+      report: reportResult.status === 'fulfilled' ? reportResult.value : null,
+    })
+  }, [isAdmin, userBranchId, userId])
+
   useEffect(() => {
-    const loadTimer = window.setTimeout(() => {
-      const loadDashboardSnapshot = async () => {
-        setSnapshot((previousSnapshot) => ({
-          ...previousSnapshot,
-          isLoading:
-            previousSnapshot.branches.length === 0 &&
-            previousSnapshot.inventoryItems.length === 0 &&
-            previousSnapshot.accounts.length === 0 &&
-            !previousSnapshot.report,
-        }))
-
-        const inventoryScope =
-          isAdmin || !user?.branchId
-            ? {}
-            : { branchId: user.branchId }
-        const reportScope = isAdmin
-          ? {}
-          : {
-              ...getTodayRange(),
-              branchId: user?.branchId ?? null,
-              cashierId: user?.id ?? null,
-            }
-
-        const [
-          branchesResult,
-          inventoryResult,
-          directoryResult,
-          reportResult,
-        ] = await Promise.allSettled([
-          getBranches(),
-          getInventoryItems(inventoryScope),
-          isAdmin
-            ? isSupabaseAuthEnabled
-              ? getProfilesDirectory()
-              : Promise.resolve(getLocalUsers())
-            : Promise.resolve([]),
-          getReportSnapshot(reportScope),
-        ])
-
-        setSnapshot({
-          isLoading: false,
-          hasPartialError: [
-            branchesResult,
-            inventoryResult,
-            directoryResult,
-            reportResult,
-          ].some((result) => result.status === 'rejected'),
-          branches:
-            branchesResult.status === 'fulfilled' ? branchesResult.value : [],
-          inventoryItems:
-            inventoryResult.status === 'fulfilled'
-              ? inventoryResult.value.items || inventoryResult.value
-              : [],
-          accounts:
-            directoryResult.status === 'fulfilled' ? directoryResult.value : [],
-          report: reportResult.status === 'fulfilled' ? reportResult.value : null,
-        })
+    let isMounted = true
+    const refreshDashboard = (showLoading = false) => {
+      if (!isMounted) {
+        return
       }
 
-      void loadDashboardSnapshot()
+      void loadDashboardSnapshot(showLoading)
+    }
+
+    const loadTimer = window.setTimeout(() => {
+      refreshDashboard(true)
     }, 0)
+    const refreshTimer = window.setInterval(() => {
+      refreshDashboard(false)
+    }, DASHBOARD_REFRESH_INTERVAL_MS)
+    const unsubscribeFromDataRefresh = subscribeToDataRefresh(() => {
+      refreshDashboard(false)
+    })
 
     return () => {
+      isMounted = false
       window.clearTimeout(loadTimer)
+      window.clearInterval(refreshTimer)
+      unsubscribeFromDataRefresh()
     }
-  }, [isAdmin, user])
+  }, [loadDashboardSnapshot])
 
   const employeeAccounts = useMemo(
     () =>
@@ -171,31 +284,7 @@ function DashboardPage() {
   const lowStockRows = snapshot.report?.lowStock || []
   const predictiveStockoutRows = snapshot.report?.predictiveStockout || []
   const nearExpiryRows = snapshot.report?.nearExpiry || []
-  const lowStockPreview = lowStockRows.slice(0, 5)
   const inventoryRiskCount = predictiveStockoutRows.length + nearExpiryRows.length
-  const inventoryRiskPreview = [
-    ...predictiveStockoutRows.slice(0, 3).map((item) => ({
-      id: `stockout-${item.id}`,
-      item: item.item,
-      status: `Stockout ${item.status}`,
-      value: item.estimatedDaysBeforeStockout,
-      note: `Est. ${item.estimatedStockoutDate}`,
-    })),
-    ...nearExpiryRows.slice(0, 3).map((item) => ({
-      id: `expiry-${item.id}`,
-      item: item.item,
-      status: item.status,
-      value: item.daysToExpiry,
-      note: item.batch,
-    })),
-    ...lowStockPreview.map((item) => ({
-      id: `low-${item.id}`,
-      item: item.item,
-      status: item.status,
-      value: item.stock,
-      note: `Reorder at ${item.reorderLevel}`,
-    })),
-  ].slice(0, 5)
   const topItemsPreview = (snapshot.report?.topItems || []).slice(0, 5)
   const summary = snapshot.report?.summary || {
     total_sales: 0,
@@ -251,7 +340,7 @@ function DashboardPage() {
           <NoticeBanner
             variant="warning"
             title="Inventory risk attention"
-            message={`${predictiveStockoutRows.length} stockout alert${predictiveStockoutRows.length === 1 ? '' : 's'} and ${nearExpiryRows.length} near-expiry alert${nearExpiryRows.length === 1 ? '' : 's'} are active.`}
+            message={`${predictiveStockoutRows.length} stockout alert${predictiveStockoutRows.length === 1 ? '' : 's'} and ${nearExpiryRows.length} expiry alert${nearExpiryRows.length === 1 ? '' : 's'} are active.`}
           />
         ) : lowStockRows.length > 0 ? (
           <NoticeBanner
@@ -297,13 +386,13 @@ function DashboardPage() {
           </article>
 
           <article className="info-card">
-            <p className="card-label">Stockout Alerts</p>
+            <p className="card-label">Stockout Watchlist</p>
             <strong>{summary.predictive_stockout_count}</strong>
             <p className="supporting-text">Projected by sales velocity</p>
           </article>
 
           <article className="info-card">
-            <p className="card-label">Near Expiry</p>
+            <p className="card-label">Expiry Watchlist</p>
             <strong>{summary.near_expiry_count}</strong>
             <p className="supporting-text">Batch expiry window</p>
           </article>
@@ -329,34 +418,36 @@ function DashboardPage() {
           </article>
         </div>
 
+        <div className="dashboard-watchlist-grid">
+          <WatchlistPanel
+            eyebrow="Low-Stock Items"
+            title="Restock Watchlist"
+            rows={lowStockRows}
+            type="low"
+            emptyTitle="No low-stock items"
+            emptyDescription="Loaded inventory is currently above reorder levels."
+          />
+
+          <WatchlistPanel
+            eyebrow="Near-Expiry Batches"
+            title="Expiry Watchlist"
+            rows={nearExpiryRows}
+            type="expiry"
+            emptyTitle="No batches near expiry"
+            emptyDescription="No loaded batches are inside the expiry warning window."
+          />
+
+          <WatchlistPanel
+            eyebrow="Predicted Stockout"
+            title="Sales Velocity Alerts"
+            rows={predictiveStockoutRows}
+            type="stockout"
+            emptyTitle="No projected stockouts"
+            emptyDescription="Current stock is not projected to run out soon based on recent sales."
+          />
+        </div>
+
         <div className="dashboard-secondary-grid">
-          <div className="panel">
-            <p className="card-label">Immediate Attention</p>
-            <h3 className="dashboard-panel-title">Inventory Risk Watchlist</h3>
-
-            {inventoryRiskPreview.length === 0 ? (
-              <EmptyState
-                title="No urgent stock alerts"
-                description="Current inventory is above reorder levels for the items loaded into this workspace."
-              />
-            ) : (
-              <ul className="dashboard-list">
-                {inventoryRiskPreview.map((item) => (
-                  <li key={item.id} className="dashboard-list-item">
-                    <div className="dashboard-list-copy">
-                      <strong>{item.item}</strong>
-                      <span>{item.status}</span>
-                    </div>
-                    <div className="dashboard-list-meta">
-                      <strong>{item.value}</strong>
-                      <span>{item.note}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
           <div className="panel">
             <p className="card-label">Top Sellers</p>
             <h3 className="dashboard-panel-title">Best Sellers Today</h3>
@@ -382,6 +473,35 @@ function DashboardPage() {
                 ))}
               </ul>
             )}
+          </div>
+
+          <div className="panel">
+            <p className="card-label">Operations Scope</p>
+            <h3 className="dashboard-panel-title">Loaded Monitoring Data</h3>
+
+            <ul className="dashboard-list">
+              <li className="dashboard-list-item">
+                <div className="dashboard-list-copy">
+                  <strong>{activeBranches}</strong>
+                  <span>Active branches</span>
+                </div>
+                <div className="dashboard-list-meta">
+                  <strong>{snapshot.inventoryItems.length}</strong>
+                  <span>Inventory rows</span>
+                </div>
+              </li>
+
+              <li className="dashboard-list-item">
+                <div className="dashboard-list-copy">
+                  <strong>{activeEmployees}</strong>
+                  <span>Active employees</span>
+                </div>
+                <div className="dashboard-list-meta">
+                  <strong>{summary.transaction_count}</strong>
+                  <span>Completed sales</span>
+                </div>
+              </li>
+            </ul>
           </div>
         </div>
       </section>
@@ -410,7 +530,7 @@ function DashboardPage() {
         <NoticeBanner
           variant="warning"
           title="Assigned branch needs attention"
-          message={`${inventoryRiskCount} predictive or near-expiry alert${inventoryRiskCount === 1 ? '' : 's'} in ${assignedBranchName} need review.`}
+          message={`${inventoryRiskCount} stockout or expiry alert${inventoryRiskCount === 1 ? '' : 's'} in ${assignedBranchName} need review.`}
         />
       ) : lowStockRows.length > 0 ? (
         <NoticeBanner
@@ -460,16 +580,45 @@ function DashboardPage() {
         </article>
 
         <article className="info-card">
-          <p className="card-label">Stockout Alerts</p>
+          <p className="card-label">Stockout Watchlist</p>
           <strong>{summary.predictive_stockout_count}</strong>
           <p className="supporting-text">Projected by recent selling pace.</p>
         </article>
 
         <article className="info-card">
-          <p className="card-label">Near Expiry</p>
+          <p className="card-label">Expiry Watchlist</p>
           <strong>{summary.near_expiry_count}</strong>
           <p className="supporting-text">Batches inside the warning window.</p>
         </article>
+      </div>
+
+      <div className="dashboard-watchlist-grid">
+        <WatchlistPanel
+          eyebrow="Low-Stock Items"
+          title="Restock Watchlist"
+          rows={lowStockRows}
+          type="low"
+          emptyTitle="No low-stock items"
+          emptyDescription="Your assigned branch inventory is currently above reorder levels."
+        />
+
+        <WatchlistPanel
+          eyebrow="Near-Expiry Batches"
+          title="Expiry Watchlist"
+          rows={nearExpiryRows}
+          type="expiry"
+          emptyTitle="No batches near expiry"
+          emptyDescription="No assigned-branch batches are inside the expiry warning window."
+        />
+
+        <WatchlistPanel
+          eyebrow="Predicted Stockout"
+          title="Sales Velocity Alerts"
+          rows={predictiveStockoutRows}
+          type="stockout"
+          emptyTitle="No projected stockouts"
+          emptyDescription="Assigned branch stock is not projected to run out soon based on recent sales."
+        />
       </div>
 
       <div className="dashboard-secondary-grid">
@@ -539,33 +688,6 @@ function DashboardPage() {
             </li>
           </ul>
         </div>
-      </div>
-
-      <div className="panel">
-        <p className="card-label">Restock Watchlist</p>
-        <h3 className="dashboard-panel-title">Assigned Branch Alerts</h3>
-
-        {inventoryRiskPreview.length === 0 ? (
-          <EmptyState
-            title="No urgent stock alerts"
-            description="Your assigned branch inventory is currently above reorder levels."
-          />
-        ) : (
-          <ul className="dashboard-list">
-            {inventoryRiskPreview.map((item) => (
-              <li key={item.id} className="dashboard-list-item">
-                <div className="dashboard-list-copy">
-                  <strong>{item.item}</strong>
-                  <span>{item.status}</span>
-                </div>
-                <div className="dashboard-list-meta">
-                  <strong>{item.value}</strong>
-                  <span>{item.note}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
     </section>
   )
