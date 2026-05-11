@@ -445,9 +445,11 @@ function PosPage() {
       <div className="pos-topbar">
         <div className="pos-title-block">
           <p className="eyebrow">Sales</p>
-          <h1>Sales Workspace</h1>
+          <h1>{activeView === 'history' ? 'Sales History' : 'Sales Desk'}</h1>
           <p className="supporting-text">
-            Process live orders and review completed transaction history in one workspace.
+            {activeView === 'history'
+              ? 'Review completed transactions using the current branch and date filters.'
+              : 'Select items, confirm quantities, and complete checkout from one focused workspace.'}
           </p>
         </div>
 
@@ -773,6 +775,9 @@ function PosPage() {
                 <p className="card-label">Cart</p>
                 <h2>Current Order</h2>
               </div>
+              <span className="panel-count">
+                {cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0)} qty
+              </span>
             </div>
 
             <CartTable
